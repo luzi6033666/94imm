@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 <!-- header start -->
-{% block title %}{% ifequal  typeid "new" %}最新发布 - {{ siteName }}{{ else }}最受欢迎- {{ siteName }}{% endifequal %}{% endblock title %}
+{% block title %}{% if method == "new" %}最新发布 - {{ siteName }}{% else %}最受欢迎 - {{ siteName }}{% endif %}{% endblock title %}
 {% block keywords %}{{ keyWord }}{% endblock keywords %}
 {% block description %}{{ description }}{% endblock description %}
 <!-- header end -->
@@ -21,7 +21,7 @@
         <li class="menu-item menu-item-type-post_type menu-item-object-page current-menu-ancestor current-menu-parent current_page_parent current_page_ancestor menu-item-has-children menu-item-17">
             <a>排行榜</a>
             <ul class="sub-menu">
-                {% ifequal  method "new" %}
+                {% if method == "new" %}
                     <li class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-28">
                         <a href="/sort/new">最新发布</a></li>
                     <li>
@@ -30,12 +30,12 @@
                     <li><a href="/sort/new">最新发布</a></li>
                     <li class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-28">
                         <a href="/sort/hot">最受欢迎</a></li>
-                {% endifequal %}
+                {% endif %}
             </ul>
         </li>
         <li><a href="/tag">标签云</a></li>
         <li><a href="/video">视频小姐姐</a></li>
-        <li><a href="https://2i.gs/xiuren" target="_blank">秀人模特套图</a></li>
+        
     </ul>
 {% endblock menu %}
 <!-- menu end-->
@@ -43,8 +43,6 @@
 {% block section %}
     <div class="excerpts-wrapper">
         <div class="excerpts">
-            {% load pagination_tags %}
-            {% autopaginate data 10 %}
             {% for imglist in data %}
                 <article class="excerpt excerpt-c5">
                     <div class="thumbnail">
@@ -63,7 +61,7 @@
             {% endfor %}
         </div>
     </div>
-    <div class="pagination pagination-multi"> {% paginate %} </div>
+{% include 'pagination.html' %}
 {% endblock section %}
 <!-- section end-->
 <!-- js start -->

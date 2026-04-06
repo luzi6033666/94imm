@@ -13,19 +13,18 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
-from django.conf.urls import url
-from django.contrib import admin
+from django.urls import re_path
 from images import views
 
 urlpatterns = [
-    url(r'^$', views.index),
-    url(r'^article/(?P<i_id>\d+)/$', views.page, name='article'),
-    url(r'^tag/(?P<tid>\d+)/$', views.tag, name='tag'),
-    url(r'^type/(?P<typeid>\d+)/$', views.type, name='type'),
-    url(r'^search/', views.search),
-    url(r'^get_video/', views.getVideo),
-    url(r'^video/', views.pVideo),
-    url(r'^mvideo/', views.mVideo),
-    url(r'^tag/', views.HotTag),
-    url(r'^sort/(?P<method>\w+)/$', views.SortBy, name='sort'),
+    re_path(r'^$', views.index),
+    re_path(r'^article/(?P<i_id>\d+)/$', views.page, name='article'),
+    re_path(r'^tag/(?P<tid>\d+)/$', views.tag, name='tag'),
+    re_path(r'^type/(?P<typeid>\d+)/$', views.type, name='type'),
+    re_path(r'^search/$', views.search),
+    re_path(r'^get_video/$', views.getVideo),
+    re_path(r'^video/$', views.pVideo),
+    re_path(r'^mvideo/$', views.mVideo),
+    re_path(r'^tag/$', views.HotTag),
+    re_path(r'^sort/(?P<method>\w+)/$', views.SortBy, name='sort'),
 ]

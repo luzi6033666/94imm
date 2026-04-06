@@ -27,12 +27,12 @@
             <a>妹子图</a>
             <ul class="sub-menu">
                 {% for types in typelist %}
-                    {% ifequal typeid types.type_id %}
+                    {% if typeid == types.type_id %}
                         <li class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-28">
                             <a href="{% url 'type' types.type_id %} ">{{ types.type }}</a></li>
                     {% else %}
                         <li><a href="{% url 'type' types.type_id %}">{{ types.type }}</a></li>
-                    {% endifequal %}
+                    {% endif %}
                 {% endfor %}
             </ul>
         <li class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-50716">
@@ -46,21 +46,32 @@
         </li>
         <li><a href="/tag">标签云</a></li>
         <li><a href="/video">视频小姐姐</a></li>
-        <li><a href="https://2i.gs/xiuren" target="_blank">秀人模特套图</a></li>
+        
     </ul>
 {% endblock menu %}
 <!-- menu end-->
 <!-- section start-->
 {% block section %}
-
-
-	<article class="article-content" id="img-box">
-	{% for img in data %}
-		<p><img class="alignnone size-medium wp-image-42" src="/static/zde/timg.gif" data-src="{{ img }}" alt="{{ title }}" style="width:800px;hight:auto" />
-		<!--<p><img class="alignnone size-medium wp-image-42" src="{{ img }}" alt="{{ title }}" style="width:800px;hight:auto" />-->
-		{% endfor %}
-	</p>
-	</article>
+    <article class="article-content" id="img-box">
+        {% if has_images %}
+            {% for img in data %}
+                <p>
+                    <img
+                        class="alignnone size-medium wp-image-42"
+                        src="/static/zde/timg.gif"
+                        data-src="{{ img }}"
+                        alt="{{ title }}"
+                        loading="lazy"
+                        decoding="async"
+                        referrerpolicy="no-referrer"
+                        style="width:100%;max-width:800px;height:auto"
+                    />
+                </p>
+            {% endfor %}
+        {% else %}
+            <p>当前图集图片正在整理中，请稍后再试。</p>
+        {% endif %}
+    </article>
 {% endblock section %}
 <!-- section end-->
 {% block recommend %}
@@ -91,58 +102,33 @@
 
 {% block js %}
 <script>
-    var num = document.getElementsByTagName('img').length;
-    var img = document.getElementsByClassName("alignnone size-medium wp-image-42");
-    var n = 0; //存储图片加载到的位置，避免每次都从第一张图片开始遍历
-    lazyload(); //页面载入完毕加载可是区域内的图片
-    //window.onscroll = lazyload;
-    function lazyload() { //监听页面滚动事件
-        var seeHeight = document.documentElement.clientHeight; //可见区域高度
-        var scrollTop = document.documentElement.scrollTop || document.body.scrollTop; //滚动条距离顶部高度
-        for (var i = n; i < num; i++) {
-		    if (typeof(img[i])=="undefined" || img[i]=='' || img[i]==null){
-			        break; 
-			}else{
-            if (img[i].offsetTop < seeHeight + scrollTop) {
-                if (img[i].getAttribute("src") == "/static/zde/timg.gif") {
-                    img[i].src = img[i].getAttribute("data-src");
-                }
-                n = i + 1;
-            }
+    var images = document.querySelectorAll("img[data-src]");
+
+    function loadImage(image) {
+        if (!image || image.getAttribute("src") !== "/static/zde/timg.gif") {
+            return;
         }
+        image.src = image.getAttribute("data-src");
     }
-	}
-	
-	
-	
-// 简单的节流函数
-//fun 要执行的函数
-//delay 延迟
-//time  在time时间内必须执行一次
-function throttle(fun, delay, time) {
-    var timeout,
-        startTime = new Date();
-    return function() {
-        var context = this,
-            args = arguments,
-            curTime = new Date();
-        clearTimeout(timeout);
-        // 如果达到了规定的触发时间间隔，触发 handler
-        if (curTime - startTime >= time) {
-            fun.apply(context, args);
-            startTime = curTime;
-            // 没达到触发间隔，重新设定定时器
-        } else {
-            timeout = setTimeout(function(){
-	            fun.apply(context, args);
-            }, delay);
-        }
-    };
-};
-// 实际想绑定在 scroll 事件上的 handler
-//function lazyload(event) {}
-// 采用了节流函数
-window.addEventListener('scroll',throttle(lazyload,200,500));
- 
+
+    if ("IntersectionObserver" in window) {
+        var observer = new IntersectionObserver(function(entries, instance) {
+            entries.forEach(function(entry) {
+                if (!entry.isIntersecting) {
+                    return;
+                }
+                loadImage(entry.target);
+                instance.unobserve(entry.target);
+            });
+        }, {
+            rootMargin: "200px 0px"
+        });
+
+        images.forEach(function(image) {
+            observer.observe(image);
+        });
+    } else {
+        images.forEach(loadImage);
+    }
 </script>
 {% endblock js %}

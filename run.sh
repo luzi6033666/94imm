@@ -1,46 +1,56 @@
 #!/bin/sh
-NAME="uwsgi"
 
-function run_start(){
-uwsgi --ini uwsgi.ini
+set -eu
+
+SERVICE_NAME="mm187"
+
+run_start() {
+    systemctl start "${SERVICE_NAME}"
 }
 
-function run_stop(){
-if [ ! -n "$NAME" ];then
-    echo "no arguments"
-    exit;
-fi
-ID=`ps -ef | grep "$NAME" | grep -v "$0" | grep -v "grep" | awk '{print $2}'`
-for id in $ID
-do
-kill -9 $id
-done
+run_stop() {
+    systemctl stop "${SERVICE_NAME}"
 }
 
-function run_clear(){
-rm -rf cache/*
+run_restart() {
+    systemctl restart "${SERVICE_NAME}"
 }
 
-case "$1" in "start"|"s"|"S")
-    run_start
-	echo "website run successfully"
-	;;
-	"restart"|"r"|"S")
-	run_stop
-	run_clear
-	run_start
-	echo "website restart successfully"
-	;;
-	"clear"|"c"|"C")
-	run_clear
-	echo "cache cleared"
-	;;
-	"stop")
-	run_stop
-	echo "website closed"
-	;;
-	*)
-	echo -e "Use command to:\n-s   start website\n-r   restart website\n-c   clear cache\n-stop   stop website"
-	;;
-	esac
-	
+run_status() {
+    systemctl --no-pager --full status "${SERVICE_NAME}"
+}
+
+run_clear() {
+    find cache -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+}
+
+case "${1:-}" in
+    "start"|"s"|"S")
+        run_start
+        echo "website run successfully"
+        ;;
+    "restart"|"r"|"R")
+        run_clear
+        run_restart
+        echo "website restart successfully"
+        ;;
+    "clear"|"c"|"C")
+        run_clear
+        echo "cache cleared"
+        ;;
+    "stop")
+        run_stop
+        echo "website closed"
+        ;;
+    "status")
+        run_status
+        ;;
+    *)
+        echo "Use command to:"
+        echo "-s       start website"
+        echo "-r       restart website"
+        echo "-c       clear cache"
+        echo "-stop    stop website"
+        echo "-status  show service status"
+        ;;
+esac

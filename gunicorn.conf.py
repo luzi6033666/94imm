@@ -1,0 +1,9 @@
+bind = "127.0.0.1:8000"
+workers = 2
+threads = 2
+timeout = 60
+graceful_timeout = 30
+accesslog = "/opt/mm187/gunicorn-access.log"
+errorlog = "/opt/mm187/gunicorn-error.log"
+capture_output = True
+chdir = "/opt/mm187"

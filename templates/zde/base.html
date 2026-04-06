@@ -46,14 +46,14 @@
 <section class="container">{% block section %}{% endblock section %}</section>
 {% block recommend %}{% endblock recommend %}
 <footer class="footer">
-	    <p>&copy; 2020 <a href="/">{{ siteName }}</a></p>
+	    <p>&copy; 2025 <a href="/">{{ siteName }}</a> | 由 <a href="https://netiett.com/aff.php?aff=151" target="_blank">NETJETT</a> 提供技术支持</p>
 		<h1>美图分享,每日更新.</h1>
 		<ul>友情链接：
 		{% for links in friendly_link %}
 		    <li><a href="{{ links.link }}">{{ links.name }}</a></li>
 			{% endfor %}
 		</ul>
-		<p> 本站数据来自网络，如侵害您的权利请联系本站删除相关信息，邮箱：{{ email }}</p>
+		<p> 本站数据来自网络，如侵害您的权利请联系本站删除相关信息，邮箱：{{ email }} </p>
 </footer>
 
 {% block js %}{% endblock js %}

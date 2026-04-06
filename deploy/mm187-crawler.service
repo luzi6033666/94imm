@@ -1,0 +1,16 @@
+[Unit]
+Description=mm187 crawler loop
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mm187/crawler
+ExecStart=/opt/mm187/cron.sh
+Restart=always
+RestartSec=10
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

@@ -2,15 +2,9 @@
 import sys
 sys.path.append('../')
 from bs4 import BeautifulSoup
-from requests.adapters import HTTPAdapter
-import threading,pymysql,time,requests,os,urllib3,re,random
+import threading,time,os,re
 from config import mysql_config
-
-requests.packages.urllib3.disable_warnings()
-requests.adapters.DEFAULT_RETRIES = 5
-s = requests.session()
-s.keep_alive = False
-s.mount('http://', HTTPAdapter(max_retries=3))
+from common import build_session, create_db_connection, download_file, fetch
 # 数据库连接信息
 dbhost = {
     "host": mysql_config['HOST'],
@@ -25,10 +19,6 @@ index_url="https://www.2meinv.com/index-1.html"
 img_path='/static/images/'
 
 class Spider():
-    page_url_list = []
-    img_url_list = []
-    rlock = threading.RLock()
-    proxy_dict = ""
     def __init__(self, start_page_num, end_page_num,img_path, thread_num, type="home",type_id=0):
         self.start_page_num = start_page_num
         self.end_page_num=end_page_num
@@ -36,77 +26,103 @@ class Spider():
         self.thread_num = thread_num
         self.type = type
         self.type_id=type_id
+        self.page_url_list = []
+        self.img_url_list = []
+        self.rlock = threading.RLock()
+        self.session = build_session()
 
     def get_url(self):
         for i in range(self.start_page_num, self.end_page_num):
-            if self.type_id==0:
-                page = s.get(index_url.format(str(i)), verify=False, timeout=10).text
-            else:
-                page = s.get(tag_url.format(self.type,str(i)), verify=False, timeout=10).text
-            # page = s.get(base_url + self.type+"-"+str(i)+".html", verify=False).text
+            target_url = index_url.format(str(i)) if self.type_id == 0 else tag_url.format(self.type, str(i))
+            response = fetch(self.session, target_url)
+            if response is None:
+                continue
+            page = response.text
             soup = BeautifulSoup(page, "html.parser")
-            page_base_url = soup.find("ul", class_="detail-list").find_all("li")
+            detail_list = soup.find("ul", class_="detail-list")
+            if not detail_list:
+                print("未找到列表页结构：" + target_url)
+                continue
+            page_base_url = detail_list.find_all("li")
             for page_url in page_base_url:
                 url = page_url.find("a",class_="dl-pic").get("href")
                 self.page_url_list.append(url)
 
     def get_img(self,url):
         tagidlist=[]
-        db = pymysql.connect(dbhost.get("host"), dbhost.get("user"), dbhost.get("password"), dbhost.get("dbname"))
+        db = create_db_connection(dbhost)
         cursor = db.cursor()
-        page = s.get(url,verify=False, timeout=10)
-        soup = BeautifulSoup(page.text, "html.parser")
-        title=soup.title.string.replace("_爱美女","")
-        if self.type_id == 0:
-            if "袜" in title or "丝" in title or "腿" in title:
-                self.type_id = 2
-            elif "青春" in title or "清纯" in title:
-                self.type_id = 3
-            elif "萝莉" in title:
-                self.type_id = 4
+        try:
+            page = fetch(self.session, url)
+            if page is None:
+                return
+            soup = BeautifulSoup(page.text, "html.parser")
+            if not soup.title or not soup.title.string:
+                print("详情页结构异常：" + url)
+                return
+            title=soup.title.string.replace("_爱美女","")
+            if self.type_id == 0:
+                if "袜" in title or "丝" in title or "腿" in title:
+                    self.type_id = 2
+                elif "青春" in title or "清纯" in title:
+                    self.type_id = 3
+                elif "萝莉" in title:
+                    self.type_id = 4
+                else:
+                    self.type_id = 1
+            isExists = cursor.execute("SELECT title FROM images_page WHERE title =" + "'" + title + "'" + " limit 1;")
+            if isExists != 0:
+                print("已采集：" , title)
             else:
-                self.type_id = 1
-        isExists = cursor.execute("SELECT title FROM images_page WHERE title =" + "'" + title + "'" + " limit 1;")
-        if isExists != 0:
-            print("已采集：" , title)
-        else:
-            print("正在采集：", title)
-            tags=soup.find(attrs={"name":"Keywords"})['content'].split(",")
-            for tag in tags:
-                sqltag = "SELECT * FROM images_tag WHERE tag =" + "'" + tag + "'" + " limit 1;"
-                isExiststag = cursor.execute(sqltag)
-                if isExiststag == 0:
-                    cursor.execute("INSERT INTO images_tag (tag) VALUES (%s)", tag)
-                cursor.execute("SELECT id FROM images_tag WHERE tag =" + "'" + tag + "'")
-                for id in cursor.fetchall():
-                    tagidlist.append(id[0])
-            p = (title, str(tagidlist), time.strftime('%Y-%m-%d', time.localtime(time.time())), self.type_id, "1",url)
-            cursor.execute("INSERT INTO images_page (title,tagid,sendtime,typeid,firstimg,crawler) VALUES (%s,%s,%s,%s,%s,%s)", p)
-            pageid = cursor.lastrowid
-            img_soup=soup.find("div",class_="page-show").text
-            img_nums=re.sub("\D", "", img_soup)
-            if len(img_nums)==6:
-                img_num=img_nums[-2:]
-            elif len(img_nums)<6:
-                img_num = img_nums[-1]
-            elif len(img_nums)>6:
-                img_num = img_nums[-3:]
-            id=url.split("-")[-1].split(".")[0]
-            for i in range(1,int(img_num)+1):
-                img_page_url=base_url+"article-"+id+"-"+str(i)+".html"
-                img_page=s.get(img_page_url)
-                img_soup=BeautifulSoup(img_page.text, "html.parser")
-                img_url=img_soup.find("div",class_="pp hh").find("img").get("src")
-                img_name = img_url.split("/")[-1]
-                img_loc_path = self.img_path + time.strftime('%Y%m%d', time.localtime(
-                    time.time())) + "/" + id + "/" + img_name
-                imgp = pageid, img_loc_path,img_url
-                cursor.execute("INSERT INTO images_image (pageid,imageurl,originurl) VALUES (%s,%s,%s)", imgp)
-                if i==1:
-                    cursor.execute(
-                        "UPDATE images_page SET firstimg = " + "'" + img_loc_path + "'" + " WHERE id=" + "'" + str(
-                            pageid) + "'")
-                self.img_url_list.append({"img_url":img_url,"Referer":url,"id":id})
+                print("正在采集：", title)
+                tags=soup.find(attrs={"name":"Keywords"})['content'].split(",")
+                for tag in tags:
+                    sqltag = "SELECT * FROM images_tag WHERE tag =" + "'" + tag + "'" + " limit 1;"
+                    isExiststag = cursor.execute(sqltag)
+                    if isExiststag == 0:
+                        cursor.execute("INSERT INTO images_tag (tag) VALUES (%s)", tag)
+                    cursor.execute("SELECT id FROM images_tag WHERE tag =" + "'" + tag + "'")
+                    for id in cursor.fetchall():
+                        tagidlist.append(id[0])
+                p = (title, str(tagidlist), time.strftime('%Y-%m-%d', time.localtime(time.time())), self.type_id, "1",url)
+                cursor.execute("INSERT INTO images_page (title,tagid,sendtime,typeid,firstimg,crawler) VALUES (%s,%s,%s,%s,%s,%s)", p)
+                pageid = cursor.lastrowid
+                img_soup=soup.find("div",class_="page-show").text
+                img_nums=re.sub(r"\D", "", img_soup)
+                if len(img_nums)==6:
+                    img_num=img_nums[-2:]
+                elif len(img_nums)<6:
+                    img_num = img_nums[-1]
+                elif len(img_nums)>6:
+                    img_num = img_nums[-3:]
+                id=url.split("-")[-1].split(".")[0]
+                for i in range(1,int(img_num)+1):
+                    img_page_url=base_url+"article-"+id+"-"+str(i)+".html"
+                    img_page = fetch(self.session, img_page_url, referer=url)
+                    if img_page is None:
+                        continue
+                    img_soup=BeautifulSoup(img_page.text, "html.parser")
+                    image_root = img_soup.find("div",class_="pp hh")
+                    if not image_root or not image_root.find("img"):
+                        continue
+                    img_url=image_root.find("img").get("src")
+                    img_name = img_url.split("/")[-1]
+                    img_loc_path = self.img_path + time.strftime('%Y%m%d', time.localtime(
+                        time.time())) + "/" + id + "/" + img_name
+                    imgp = pageid, img_loc_path,img_url
+                    cursor.execute("INSERT INTO images_image (pageid,imageurl,originurl) VALUES (%s,%s,%s)", imgp)
+                    if i==1:
+                        cursor.execute(
+                            "UPDATE images_page SET firstimg = " + "'" + img_loc_path + "'" + " WHERE id=" + "'" + str(
+                                pageid) + "'")
+                    self.img_url_list.append({"img_url":img_url,"Referer":url,"id":id})
+                db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            cursor.close()
+            db.close()
 
     def down_img(self,imgsrc,Referer,id):
         headers = {
@@ -118,19 +134,19 @@ class Spider():
         isdata = os.path.exists("../" + path + page_id)
         if not isdata:
             os.makedirs("../" + path + page_id)
-        with open("../" + path + page_id + "/" + imgsrc.split("/")[-1].split(".")[0] + ".jpg", "wb") as f:
-            print("已保存：" + path + page_id + "/" + imgsrc.split("/")[-1].split(".")[0] + ".jpg")
-            f.write(s.get(imgsrc, headers=headers,verify=False, timeout=10).content)
+        dest_path = "../" + path + page_id + "/" + imgsrc.split("/")[-1].split(".")[0] + ".jpg"
+        print("已保存：" + path + page_id + "/" + imgsrc.split("/")[-1].split(".")[0] + ".jpg")
+        download_file(self.session, imgsrc, dest_path, headers=headers, referer=Referer)
 
     def run_page(self):
         while True:
-            Spider.rlock.acquire()
+            self.rlock.acquire()
             if len(self.page_url_list) == 0:
-                Spider.rlock.release()
+                self.rlock.release()
                 break
             else:
                 page_url = self.page_url_list.pop()
-                Spider.rlock.release()
+                self.rlock.release()
                 try:
                     self.get_img(page_url)
                 except Exception as e:
@@ -139,16 +155,16 @@ class Spider():
 
     def run_img(self):
         while True:
-            Spider.rlock.acquire()
+            self.rlock.acquire()
             if len(self.img_url_list) == 0 :
-                Spider.rlock.release()
+                self.rlock.release()
                 break
             else:
                 urls = self.img_url_list.pop()
                 url = urls.get("img_url")
                 Referer = urls.get("Referer")
                 id = urls.get("id")
-                Spider.rlock.release()
+                self.rlock.release()
                 try:
                     self.down_img(url, Referer, id)
                 except Exception as e:
@@ -163,7 +179,7 @@ class Spider():
             url_threa_list.append(add_pic_t)
 
         for t in url_threa_list:
-            t.setDaemon(True)
+            t.daemon = True
             t.start()
 
         for t in url_threa_list:
@@ -190,5 +206,11 @@ if __name__ == "__main__":
         spider = Spider(start_page_num=i.get("start_page"),end_page_num=i.get("end_page"), img_path='/static/images/', thread_num=3,
                         type=i.get("type"),type_id=i.get("type_id"))
         spider.get_url()
+        if not spider.page_url_list:
+            print("未获取到可用列表，跳过 {}".format(i.get("type")))
+            continue
         spider.run_1()
+        if not spider.img_url_list:
+            print("未获取到可下载图片，跳过 {}".format(i.get("type")))
+            continue
         spider.run_2()

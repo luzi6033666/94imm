@@ -13,12 +13,12 @@
             <a>妹子图</a>
             <ul class="sub-menu">
                 {% for types in typelist %}
-                    {% ifequal  typeid types.type_id %}
+                    {% if typeid == types.type_id %}
                         <li class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-28">
                             <a href="{% url 'type' types.type_id %} ">{{ types.type }}</a></li>
                     {% else %}
                         <li><a href="{% url 'type' types.type_id %}">{{ types.type }}</a></li>
-                    {% endifequal %}
+                    {% endif %}
                 {% endfor %}
             </ul>
         </li>
@@ -33,7 +33,7 @@
         </li>
         <li><a href="/tag">标签云</a></li>
         <li><a href="/video">视频小姐姐</a></li>
-        <li><a href="https://2i.gs/xiuren" target="_blank">秀人模特套图</a></li>
+        
     </ul>
 {% endblock menu %}
 <!-- menu end-->
@@ -41,8 +41,6 @@
 {% block section %}
     <div class="excerpts-wrapper">
         <div class="excerpts">
-            {% load pagination_tags %}
-            {% autopaginate data 10 %}
             {% for imglist in data %}
                 <article class="excerpt excerpt-c5">
                     <div class="thumbnail">
@@ -61,7 +59,7 @@
             {% endfor %}
         </div>
     </div>
-	<div class="pagination pagination-multi"> {% paginate %} </div>
+{% include 'pagination.html' %}
 {% endblock section %}
 <!-- section end-->
 <!-- js start -->

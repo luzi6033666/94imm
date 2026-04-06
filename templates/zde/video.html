@@ -46,7 +46,7 @@
         </li>
         <li><a href="/tag">标签云</a></li>
         <li class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-28"><a href="/video">视频小姐姐</a></li>
-        <li><a href="https://2i.gs/xiuren" target="_blank">秀人模特套图</a></li>
+        
     </ul>
 {% endblock menu %}
 <!-- menu end-->
@@ -70,7 +70,7 @@
 
     <script>
         (function (window, document) {
-            var user_id ={{ user_id }};
+            var user_id = "{{ user_id|escapejs }}";
             if (top != self) {
                 window.top.location.replace(self.location.href);
             }
@@ -80,6 +80,7 @@
             var bind = function (element, event, callback) {
                 return element.addEventListener(event, callback);
             }
+            var video = get("player");
             var randomm = function () {
                 var ajax = new XMLHttpRequest();
                 ajax.open("get", "/get_video?tem=" + Math.random());
@@ -91,23 +92,22 @@
                         var source = document.getElementById("source");
                         //uid.innerText = obj.user_id;
                         source.innerText = obj.source;
-                        player.src = obj.url;
+                        video.src = obj.url;
                         user_id = obj.user_id;
-                        player.play()
+                        video.play()
                     }
                 }
                 //location.replace("?tmp="+Math.random());
             }
 
             bind(get('next'), 'click', randomm);
-            bind(player, 'error', function () {
+            bind(video, 'error', function () {
                 randomm();
             });
             /*bind(get('check'), 'click', function () {
 
                 window.open("https://live.kuaishou.com/search/?keyword=" + user_id);
             });*/
-            var video = document.getElementById("player");
             video.onclick = function () {
                 if (video.paused) {
                     video.play();
@@ -115,8 +115,8 @@
                     video.pause();
                 }
             }
-            bind(player, 'ended', function () {
-                if (auto) randomm();
+            bind(video, 'ended', function () {
+                randomm();
             });
         })(window, document);
     </script>

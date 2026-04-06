@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+cache/
+static/images/
+static/videos/
+*.pyc
+*.pyo
+*.bak-*
+gunicorn-access.log
+gunicorn-error.log
+uwsgi.log
+uwsgi.pid
+uwsgi.sock

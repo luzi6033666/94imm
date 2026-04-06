@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
+
 from config import mysql_config,allow_url,cache_time,templates,debug
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -21,12 +22,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'ge)(a+37gny_zn9c(+(kq+^yqw!jvblb67ck5allkpgv6(wi@^'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'ge)(a+37gny_zn9c(+(kq+^yqw!jvblb67ck5allkpgv6(wi@^')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = debug
 
-ALLOWED_HOSTS = allow_url
+ALLOWED_HOSTS = list(set(allow_url + ['localhost', '127.0.0.1', '86.53.104.137']))
 
 
 # Application definition
@@ -39,7 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'images',
-    'dj_pagination'
 ]
 
 MIDDLEWARE = [
@@ -48,18 +48,17 @@ MIDDLEWARE = [
 	'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'dj_pagination.middleware.PaginationMiddleware',
     'django.middleware.cache.FetchFromCacheMiddleware',
 ]
 
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': 'cache', #设置缓存文件的目录
+        'LOCATION': os.path.join(BASE_DIR, 'cache'), #设置缓存文件的目录
 		'TIMEOUT':cache_time,
 		'OPTIONS':{
 			'MAX_ENTRIES': 300,
@@ -73,7 +72,7 @@ ROOT_URLCONF = 'silumz.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates'+"/"+templates)]
+        'DIRS': [os.path.join(BASE_DIR, 'templates', templates)]
         ,
         'APP_DIRS': True,
         'OPTIONS': {
@@ -149,5 +148,9 @@ STATICFILES_DIRS=(
     os.path.join(BASE_DIR,'static'),
 )
 
-# dj_pagination
-PAGINATION_DEFAULT_WINDOW=1
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+X_FRAME_OPTIONS = 'DENY'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
