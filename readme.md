@@ -42,11 +42,11 @@ mysql_config = {
     "PORT": "3306",
 }
 
-allow_url = ["mm.187187.xyz", "127.0.0.1"]
+allow_url = ["your-domain.example", "127.0.0.1"]
 cache_time = 300
 templates = "zde"
 site_name = "爱妹子"
-site_url = "https://mm.187187.xyz"
+site_url = "https://your-domain.example"
 key_word = "爱妹子,美女写真,性感美女,美女图片,高清美女"
 description = "每日分享最新最全的美女图片和高清性感美女图片"
 email = "admin@example.com"
